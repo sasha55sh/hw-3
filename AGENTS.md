@@ -21,8 +21,11 @@ Keep changes maintainable and consistent with the surrounding code. Use npm as t
 
 ## Repository layout
 
-- `src/app` - Next.js App Router routes, layouts and pages.
-- `public` - static assets.
+- `app` - Next.js App Router: `page.tsx` (main page, assembles components) and `api/` route handlers (`generate`, `health`).
+- `components` - UI components.
+- `lib` - shared logic: types, zod schemas, prompts, Claude client (server only), parsing, checks, export, logging, cost.
+- `tests` - vitest unit tests for `lib`.
+- `public` - static assets; `public/sample-data` holds demo scripts, brand guide and tested hooks CSV.
 - `docs` - conventions and feature documentation.
 - `docs/features` - one file per feature, describing how it works.
 
