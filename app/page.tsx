@@ -33,10 +33,13 @@ export default function Home() {
         <section aria-label="Input" className="flex flex-col gap-4">
           <ScriptInput
             script={lab.script}
+            rawScript={lab.rawScript}
             winnerName={lab.winnerName}
             onScriptChange={lab.handleScriptChange}
+            onRawScriptChange={lab.handleRawScriptChange}
             onWinnerNameChange={lab.handleWinnerNameChange}
             onDemoSelect={lab.handleDemoSelect}
+            onClearAll={lab.handleClearAll}
           />
           <LibraryUpload library={lab.library} onLibraryChange={lab.handleLibraryChange} />
           <SettingsPanel

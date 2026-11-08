@@ -5,6 +5,7 @@ import { checkVariant, runChecks } from "@/lib/checks";
 import { pickTopLibrary } from "@/lib/library";
 import { logEvent } from "@/lib/logger";
 import { parseScript } from "@/lib/parseScript";
+import { passcodeHeaders } from "@/lib/passcodeHeader";
 import { SAMPLE_BRAND_GUIDE, SAMPLE_LIBRARY, type DemoScript } from "@/lib/sampleData";
 import {
   DEFAULT_SETTINGS,
@@ -12,6 +13,7 @@ import {
   generateOneResponseSchema,
   generateResponseSchema,
   libraryItemSchema,
+  scriptPartsSchema,
   settingsSchema,
   type GenerateRequest,
 } from "@/lib/schema";
@@ -32,6 +34,9 @@ const PASSCODE_KEY = "hook-lab_passcode";
 const SETTINGS_KEY = "hook-lab_settings";
 const BRAND_GUIDE_KEY = "hook-lab_brand_guide";
 const LIBRARY_KEY = "hook-lab_library";
+const SCRIPT_KEY = "hook-lab_script";
+const SCRIPT_RAW_KEY = "hook-lab_script_raw";
+const WINNER_NAME_KEY = "hook-lab_winner_name";
 
 const storedLibrarySchema = z.array(libraryItemSchema);
 const DEFAULT_WINNER_NAME = "winner";
@@ -76,6 +81,18 @@ function parseStoredLibrary(raw: string | null | undefined): readonly LibraryIte
   }
 }
 
+function parseStoredScript(raw: string | null | undefined): ScriptParts {
+  if (!raw) {
+    return EMPTY_SCRIPT;
+  }
+  try {
+    const parsed = scriptPartsSchema.safeParse(JSON.parse(raw));
+    return parsed.success ? parsed.data : EMPTY_SCRIPT;
+  } catch {
+    return EMPTY_SCRIPT;
+  }
+}
+
 function toVariants(generated: readonly GeneratedVariant[], type: VariantType): Variant[] {
   return generated.map((variant) => ({
     ...variant,
@@ -106,7 +123,7 @@ async function postGenerate(passcode: string, body: GenerateRequest): Promise<Ap
   try {
     response = await fetch("/api/generate", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-app-passcode": passcode },
+      headers: { "Content-Type": "application/json", ...passcodeHeaders(passcode) },
       body: JSON.stringify(body),
     });
   } catch {
@@ -129,10 +146,11 @@ export function useHookLab() {
   const [storedSettings, setStoredSettings] = useLocalStorageValue(SETTINGS_KEY);
   const [storedBrandGuide, setStoredBrandGuide] = useLocalStorageValue(BRAND_GUIDE_KEY);
   const [storedLibrary, setStoredLibrary] = useLocalStorageValue(LIBRARY_KEY);
+  const [storedScript, setStoredScript] = useLocalStorageValue(SCRIPT_KEY);
+  const [storedRawScript, setStoredRawScript] = useLocalStorageValue(SCRIPT_RAW_KEY);
+  const [storedWinnerName, setStoredWinnerName] = useLocalStorageValue(WINNER_NAME_KEY);
 
   const [gateMessage, setGateMessage] = useState<string | null>(null);
-  const [script, setScript] = useState<ScriptParts>(EMPTY_SCRIPT);
-  const [winnerName, setWinnerName] = useState(DEFAULT_WINNER_NAME);
   const [status, setStatus] = useState<GenerationStatus>({ kind: "idle" });
   const [run, setRun] = useState<Run | null>(null);
   const [regeneratingIds, setRegeneratingIds] = useState<ReadonlySet<string>>(new Set());
@@ -141,6 +159,9 @@ export function useHookLab() {
   const settings = useMemo(() => parseStoredSettings(storedSettings), [storedSettings]);
   const library = useMemo(() => parseStoredLibrary(storedLibrary), [storedLibrary]);
   const brandGuide = storedBrandGuide ?? "";
+  const script = useMemo(() => parseStoredScript(storedScript), [storedScript]);
+  const rawScript = storedRawScript ?? "";
+  const winnerName = storedWinnerName ?? DEFAULT_WINNER_NAME;
   const checkedRun = useMemo<Run | null>(() => {
     if (run === null) {
       return null;
@@ -178,13 +199,38 @@ export function useHookLab() {
     setStoredLibrary(JSON.stringify(next));
   }
 
+  function handleScriptChange(next: ScriptParts) {
+    setStoredScript(JSON.stringify(next));
+  }
+
+  function handleRawScriptChange(next: string) {
+    setStoredRawScript(next);
+  }
+
+  function handleWinnerNameChange(next: string) {
+    setStoredWinnerName(next);
+  }
+
   function handleDemoSelect(demo: DemoScript) {
-    setScript(parseScript(demo.raw));
-    setWinnerName(demo.name);
+    handleRawScriptChange(demo.raw);
+    handleScriptChange(parseScript(demo.raw));
+    handleWinnerNameChange(demo.name);
     handleLibraryChange(SAMPLE_LIBRARY);
     if (brandGuide.trim() === "") {
       setStoredBrandGuide(SAMPLE_BRAND_GUIDE);
     }
+  }
+
+  function handleClearAll() {
+    setStoredScript(null);
+    setStoredRawScript(null);
+    setStoredWinnerName(null);
+    setStoredLibrary(null);
+    setStoredBrandGuide(null);
+    setStoredSettings(null);
+    setRun(null);
+    setStatus({ kind: "idle" });
+    setRegenerateError(null);
   }
 
   function buildRequestBase() {
@@ -328,6 +374,7 @@ export function useHookLab() {
     passcode,
     gateMessage,
     script,
+    rawScript,
     winnerName,
     library,
     settings,
@@ -338,8 +385,10 @@ export function useHookLab() {
     regenerateError,
     canGenerate,
     handlePasscodeSubmit,
-    handleScriptChange: setScript,
-    handleWinnerNameChange: setWinnerName,
+    handleScriptChange,
+    handleRawScriptChange,
+    handleWinnerNameChange,
+    handleClearAll,
     handleLibraryChange,
     handleSettingsChange,
     handleBrandGuideChange,

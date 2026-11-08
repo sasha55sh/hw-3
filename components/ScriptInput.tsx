@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ChangeEvent } from "react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button, Card, buttonClassName, inputClassName, labelClassName, textareaClassName } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { parseScript } from "@/lib/parseScript";
@@ -22,15 +23,33 @@ const PART_FIELDS: readonly PartField[] = [
 
 interface ScriptInputProps {
   script: ScriptParts;
+  rawScript: string;
   winnerName: string;
   onScriptChange: (script: ScriptParts) => void;
+  onRawScriptChange: (raw: string) => void;
   onWinnerNameChange: (name: string) => void;
   onDemoSelect: (demo: DemoScript) => void;
+  onClearAll: () => void;
 }
 
-export function ScriptInput({ script, winnerName, onScriptChange, onWinnerNameChange, onDemoSelect }: ScriptInputProps) {
-  const [raw, setRaw] = useState("");
+export function ScriptInput({
+  script,
+  rawScript: raw,
+  winnerName,
+  onScriptChange,
+  onRawScriptChange: setRaw,
+  onWinnerNameChange,
+  onDemoSelect,
+  onClearAll,
+}: ScriptInputProps) {
   const [fileError, setFileError] = useState<string | null>(null);
+  const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
+
+  function handleClearConfirm() {
+    setIsClearDialogOpen(false);
+    setFileError(null);
+    onClearAll();
+  }
 
   function handleParse() {
     onScriptChange(parseScript(raw));
@@ -58,7 +77,6 @@ export function ScriptInput({ script, winnerName, onScriptChange, onWinnerNameCh
     if (demo === undefined) {
       return;
     }
-    setRaw(demo.raw);
     setFileError(null);
     onDemoSelect(demo);
   }
@@ -107,7 +125,25 @@ export function ScriptInput({ script, winnerName, onScriptChange, onWinnerNameCh
             </option>
           ))}
         </select>
+        <Button
+          variant="ghost"
+          onClick={() => setIsClearDialogOpen(true)}
+          aria-haspopup="dialog"
+          className="ml-auto hover:text-flag-red"
+        >
+          Clear all
+        </Button>
       </div>
+      <ConfirmDialog
+        open={isClearDialogOpen}
+        title="Clear everything?"
+        confirmLabel="Clear all"
+        onConfirm={handleClearConfirm}
+        onCancel={() => setIsClearDialogOpen(false)}
+      >
+        <p>This removes the winning script, tested hooks library and brand guide, resets settings to defaults and clears the results.</p>
+        <p className="text-ink">The pilot log and passcode are kept.</p>
+      </ConfirmDialog>
       {fileError && (
         <p role="alert" className="text-sm text-flag-red">
           {fileError}

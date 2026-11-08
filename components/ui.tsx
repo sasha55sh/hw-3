@@ -2,12 +2,13 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 import type { Angle, VariantType } from "@/lib/types";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost";
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
 const BUTTON_VARIANT_CLASSES: Readonly<Record<ButtonVariant, string>> = {
   primary: "bg-accent text-accent-ink hover:bg-accent-strong",
   secondary: "border border-line bg-surface-raised text-ink hover:border-accent",
   ghost: "text-ink-muted hover:text-ink",
+  danger: "bg-flag-red text-canvas hover:opacity-90",
 };
 
 export const VARIANT_TYPE_LABELS: Readonly<Record<VariantType, string>> = {
@@ -35,7 +36,7 @@ export const inputClassName = cn(
 
 export const textareaClassName = cn(inputClassName, "field-sizing-content min-h-11 resize-y leading-relaxed");
 
-export const labelClassName ="text-xs font-semibold uppercase tracking-wide text-ink-muted";
+export const labelClassName ="text-xs font-semibold uppercase tracking-wide text-ink-muted mb-2";
 
 export function buttonClassName(variant: ButtonVariant = "secondary", className?: string): string {
   return cn(

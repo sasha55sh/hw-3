@@ -1,36 +1,17 @@
-import { createHash, timingSafeEqual } from "node:crypto";
 import { GenerationError, generateJson } from "@/lib/anthropic";
+import { errorResponse, rejectInvalidPasscode } from "@/lib/passcode";
 import { buildOnePrompt, buildSystemPrompt, buildUserPrompt } from "@/lib/prompts";
 import { generateRequestSchema, parseModelOutput, parseOneModelOutput } from "@/lib/schema";
-import type { GenerateErrorResponse, GenerateOneResponse, GenerateResponse } from "@/lib/types";
+import type { GenerateOneResponse, GenerateResponse } from "@/lib/types";
 
 export const maxDuration = 60;
-
-function sha256(value: string): Buffer {
-  return createHash("sha256").update(value).digest();
-}
-
-function isPasscodeValid(received: string | null, expected: string): boolean {
-  if (received === null) {
-    return false;
-  }
-  return timingSafeEqual(sha256(received), sha256(expected));
-}
-
-function errorResponse(status: number, error: string): Response {
-  const body: GenerateErrorResponse = { error };
-  return Response.json(body, { status });
-}
 
 export async function POST(request: Request): Promise<Response> {
   const startedAt = Date.now();
 
-  const expectedPasscode = process.env.APP_PASSCODE;
-  if (!expectedPasscode) {
-    return errorResponse(500, "Server is not configured: APP_PASSCODE is missing.");
-  }
-  if (!isPasscodeValid(request.headers.get("x-app-passcode"), expectedPasscode)) {
-    return errorResponse(401, "Invalid passcode.");
+  const rejection = rejectInvalidPasscode(request);
+  if (rejection !== null) {
+    return rejection;
   }
 
   let rawBody: unknown;
